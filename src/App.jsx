@@ -1,16 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Search from './components/Search';
 import Spinner from './components/Spinner';
+import MovieCard from './components/MovieCard';
 
-const API_URL = 'https://imdb.iamidiotareyoutoo.com/';
+const BASE_URL = 'https://imdb.iamidiotareyoutoo.com';
 
 const App = () => {
-    const [searchTerm, setSearchTerm] = useState('spiderman');
+    const [searchTerm, setSearchTerm] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     const [movies, setMovies] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
 
     const formattedMovieData = (movie) => {
+        console.log(movie);
         let formattedMovie = {};
         for (let key in movie) {
             if (key.includes('#')) formattedMovie[key.replace('#', '')] = movie[key];
@@ -19,13 +21,16 @@ const App = () => {
         return { ...formattedMovie };
     };
 
-    const fetchMovies = async () => {
+    const fetchMovies = useCallback(async () => {
+        if (searchTerm.length <= 2) return;
+
         setIsLoading(true);
         setErrorMessage('');
         try {
-            const endPoint = API_URL + `search?q=${searchTerm}`;
+            const endPoint = BASE_URL + `/search?q=${searchTerm}`;
+            console.log(endPoint);
             const data = await fetch(endPoint).then((res) => res.json());
-            const formattedMovies = data?.description?.map(formattedMovieData);
+            const formattedMovies = data?.description ? data.description.map(formattedMovieData) : [];
             setMovies(formattedMovies);
         } catch (error) {
             console.error(`Error fetching movies: ${error}`);
@@ -33,10 +38,11 @@ const App = () => {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [searchTerm]);
+
     useEffect(() => {
         fetchMovies();
-    }, []);
+    }, [fetchMovies]);
 
     return (
         <main>
@@ -49,22 +55,22 @@ const App = () => {
                     </h1>
                     <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
                 </header>
-                <section className="all-movies">
-                    <h2 className="mt-[40px]">All Movies</h2>
-                    {isLoading ? (
-                        <Spinner />
-                    ) : errorMessage ? (
-                        <p className="text-red-500">{errorMessage}</p>
-                    ) : (
-                        <ul>
-                            {movies.map((movie) => (
-                                <li key={movie.IMDB_ID}>
-                                    <p className="text-white">{movie.TITLE}</p>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </section>
+                {searchTerm.length > 2 && (
+                    <section className="all-movies">
+                        <h2 className="mt-[40px]">All Movies</h2>
+                        {isLoading ? (
+                            <Spinner />
+                        ) : errorMessage ? (
+                            <p className="text-red-500">{errorMessage}</p>
+                        ) : (
+                            <ul>
+                                {movies.map((movie) => (
+                                    <MovieCard key={movie.IMDB_ID} movie={movie} baseURL={BASE_URL} />
+                                ))}
+                            </ul>
+                        )}
+                    </section>
+                )}
             </div>
         </main>
     );
